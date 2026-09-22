@@ -85,10 +85,6 @@ It supports two primary workflows:
 ### Using `uv` (Recommended)
 
 ```bash
-# Clone the repository
-git clone https://github.com/doctorgu/compare-schema-data.git
-cd compare-schema-data
-
 # Create virtual environment and activate
 uv venv
 # Windows:
@@ -96,8 +92,8 @@ uv venv
 # macOS/Linux:
 source .venv/bin/activate
 
-# Install dependencies in editable mode
-uv pip install -e . --native-tls
+# Install from PyPI
+uv pip install compare-schema-data --native-tls
 ```
 
 ### Using standard `pip`
@@ -109,7 +105,8 @@ python -m venv .venv
 # macOS/Linux:
 source .venv/bin/activate
 
-pip install -e .
+# Install from PyPI
+pip install compare-schema-data
 ```
 
 ---

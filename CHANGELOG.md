@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.7
+
+- Update installation instructions to use PyPI in README and README_KO
+
 ## 1.0.6
 
 - Return False, False when prev_version is empty in compare_schema_data

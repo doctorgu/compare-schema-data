@@ -85,10 +85,6 @@
 ### `uv` 사용 (권장)
 
 ```bash
-# 리포지토리 클론
-git clone https://github.com/doctorgu/compare-schema-data.git
-cd compare-schema-data
-
 # 가상환경 생성 및 활성화
 uv venv
 # Windows:
@@ -96,8 +92,8 @@ uv venv
 # macOS/Linux:
 source .venv/bin/activate
 
-# 의존성 패키지 설치 (개발 모드)
-uv pip install -e . --native-tls
+# PyPI 패키지 설치
+uv pip install compare-schema-data --native-tls
 ```
 
 ### 일반 `pip` 사용
@@ -109,7 +105,8 @@ python -m venv .venv
 # macOS/Linux:
 source .venv/bin/activate
 
-pip install -e .
+# PyPI 패키지 설치
+pip install compare-schema-data
 ```
 
 ---
