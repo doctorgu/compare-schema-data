@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "compare-schema-data"
-version = "1.0.3"
+version = "1.0.4"
 description = "Compare schema and data between databases"
 readme = "README_KO.md"
 requires-python = ">=3.13"
@@ -41,8 +41,8 @@ test = [
 ]
 
 [project.scripts]
-import = "src.main:import_by_args"
-compare = "src.main:compare_by_args"
+import = "compare_schema_data.import_:import_by_args"
+compare = "compare_schema_data.compare:compare_by_args"
 
 [project.urls]
 homepage = "https://github.com/doctorgu/compare-schema-data"
@@ -51,7 +51,7 @@ documentation = "https://github.com/doctorgu/compare-schema-data"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["src*", "db_client*"]
+include = ["compare_schema_data*", "db_client*"]
 namespaces = true
 
 [tool.setuptools.package-data]

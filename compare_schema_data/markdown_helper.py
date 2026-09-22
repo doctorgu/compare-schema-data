@@ -5,7 +5,7 @@ from pathlib import Path
 from pydantic import BaseModel
 from tabulate import tabulate
 
-from src.models import (
+from compare_schema_data.models import (
     DataDiff,
     DataNotExists,
     HeaderAllType,

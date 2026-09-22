@@ -11,6 +11,6 @@
 - when run command, use `uv` (e.g. `uv pip install`)
 
 - when run python, use `.venv/Scripts/python.exe` with `-m` option
-  (e.g. `.venv/Scripts/python.exe -m src.main`)
+  (e.g. `.venv/Scripts/python.exe -m compare_schema_data.compare`)
 
 - use `--native-tls` for pip

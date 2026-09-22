@@ -8,11 +8,10 @@ from typing import cast
 
 from mysqlclient_client.client import Client
 from mysqlclient_client.settings import Settings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from db_client.schema_client import SchemaClient
-from db_client.schema_settings import SCHEMA_SQL_PATH, SQLITE_PATH
-from src.config import CompareConfig, DataTableConfig, EnvConfig
-from src.models import (
+from compare_schema_data.config import CompareConfig, DataTableConfig, EnvConfig
+from compare_schema_data.models import (
     DataDiff,
     DataNotExists,
     DifferentType,
@@ -27,8 +26,10 @@ from src.models import (
     SchemaDiff,
     SchemaNotExists,
 )
-from src.util_mysql import get_column_ddl
-from src.util_path import load_config
+from compare_schema_data.util_mysql import get_column_ddl
+from compare_schema_data.util_path import load_config
+from db_client.schema_client import SchemaClient
+from db_client.schema_settings import SCHEMA_SQL_PATH, SQLITE_PATH
 
 
 def get_db_settings(env: EnvConfig, db_name: str, config: CompareConfig):
@@ -1180,19 +1181,23 @@ def compare_data(
     )
 
 
-def get_config(config_path: str) -> CompareConfig:
+def get_config(config_path: str = ""):
+    if not config_path:
+        config_path = "config/config.yaml"
     if os.path.exists(config_path):
         config_path = config_path
     else:
-        config_path = os.path.join(os.path.dirname(__file__), config_path)
+        config_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)), config_path
+        )
     config = load_config(config_path, CompareConfig)
     return config
 
 
 def import_schema_data(
     *,
-    config_path: str,
-    version: str,
+    config_path: str = "",
+    version: str = "",
 ):
     """import schema and data"""
 
@@ -1222,3 +1227,21 @@ def import_schema_data(
 
         insert_schema(db, schema)
         insert_data(db, data)
+
+
+class ConfigArgs(BaseSettings):
+    # Enable automatic command-line argument parsing
+    model_config = SettingsConfigDict(cli_parse_args=True, cli_ignore_unknown_args=True)
+
+    config_path: str
+
+
+class ConfigArgsImport(ConfigArgs):
+    version: str | None = None
+
+
+def import_by_args():
+    """import from source to sqlite"""
+
+    conf = ConfigArgsImport()
+    import_schema_data(config_path=conf.config_path, version=conf.version or "")

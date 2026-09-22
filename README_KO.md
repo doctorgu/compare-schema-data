@@ -218,10 +218,14 @@ import --config_path config/config.yaml
 import --config_path config/config.yaml --version 202609221530
 ```
 
-Python 모듈을 통해 실행할 수도 있습니다:
+Python 코드(`.py`)에서 직접 호출할 수도 있습니다:
 
-```bash
-.venv/Scripts/python.exe -c "from src.main import import_by_args; import_by_args()" --config_path config/config.yaml
+```python
+from compare_schema_data.import_ import import_schema_data
+
+import_schema_data(config_path="config/config.yaml")
+# 특정 버전명을 직접 지정할 경우:
+# import_schema_data(config_path="config/config.yaml", version="202609221530")
 ```
 
 ### 2단계: 스키마 및 데이터 비교 (`compare`)
@@ -236,10 +240,14 @@ compare --config_path config/config.yaml
 compare --config_path config/config.yaml --version 202609221530 --prev_version 202609211600
 ```
 
-Python 모듈을 통해 실행할 수도 있습니다:
+Python 코드(`.py`)에서 직접 호출할 수도 있습니다:
 
-```bash
-.venv/Scripts/python.exe -c "from src.main import compare_by_args; compare_by_args()" --config_path config/config.yaml
+```python
+from compare_schema_data.compare import compare_schema_data
+
+compare_schema_data(config_path="config/config.yaml")
+# 특정 버전을 직접 지정하여 비교할 경우:
+# compare_schema_data(config_path="config/config.yaml", version="202609221530", prev_version="202609211600")
 ```
 
 ---
@@ -312,10 +320,9 @@ compare-schema-data/
 │       └── source/                  # MySQL 메타데이터/데이터 추출 쿼리 모음
 │           ├── import_schema.yml
 │           └── import_data.yml
-└── src/
-    ├── main.py                      # CLI 실행 진입점 (import_by_args, compare_by_args)
-    ├── import_.py                   # MySQL 추출 및 SQLite 적재 로직
-    ├── compare.py                   # 스키마 및 데이터 차이 분석 엔진
+└── compare_schema_data/
+    ├── import_.py                   # MySQL 추출, SQLite 적재 로직 및 import_by_args CLI
+    ├── compare.py                   # 스키마 및 데이터 차이 분석 엔진 및 compare_by_args CLI
     ├── config.py                    # Pydantic 설정 모델 및 환경변수 처리 로직
     ├── models.py                    # 데이터 모델, 비교 타입, 테이블 헤더 정의
     ├── excel_helper.py              # XlsxWriter 기반 엑셀 리포트 작성기

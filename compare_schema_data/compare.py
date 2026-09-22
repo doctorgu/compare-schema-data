@@ -8,13 +8,12 @@ from typing import cast
 
 from mysqlclient_client.client import Client
 from mysqlclient_client.settings import Settings
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
-from db_client.schema_client import SchemaClient
-from db_client.schema_settings import SQLITE_PATH
-from src.config import CompareConfig, DataTableConfig
-from src.excel_helper import write_excel
-from src.markdown_helper import write_markdown
-from src.models import (
+from compare_schema_data.config import CompareConfig, DataTableConfig
+from compare_schema_data.excel_helper import write_excel
+from compare_schema_data.markdown_helper import write_markdown
+from compare_schema_data.models import (
     DataDiff,
     DataNotExists,
     DifferentType,
@@ -29,8 +28,10 @@ from src.models import (
     SchemaDiff,
     SchemaNotExists,
 )
-from src.util_mysql import get_column_ddl
-from src.util_path import load_config
+from compare_schema_data.util_mysql import get_column_ddl
+from compare_schema_data.util_path import load_config
+from db_client.schema_client import SchemaClient
+from db_client.schema_settings import SQLITE_PATH
 
 
 def get_latest_version(db: SchemaClient) -> str:
@@ -1292,3 +1293,26 @@ def compare_schema_data(
             )
 
             return is_compare, is_log
+
+
+class ConfigArgs(BaseSettings):
+    # Enable automatic command-line argument parsing
+    model_config = SettingsConfigDict(cli_parse_args=True, cli_ignore_unknown_args=True)
+
+    config_path: str
+
+
+class ConfigArgsCompare(ConfigArgs):
+    prev_version: str | None = None
+    version: str | None = None
+
+
+def compare_by_args() -> tuple[bool, bool] | None:
+    """compare schema and data"""
+
+    conf = ConfigArgsCompare()
+    return compare_schema_data(
+        config_path=conf.config_path,
+        version=conf.version or "",
+        prev_version=conf.prev_version or "",
+    )

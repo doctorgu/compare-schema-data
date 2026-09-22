@@ -219,10 +219,14 @@ import --config_path config/config.yaml
 import --config_path config/config.yaml --version 202609221530
 ```
 
-Alternatively, run with Python:
+Alternatively, call directly in Python (`.py`):
 
-```bash
-.venv/Scripts/python.exe -c "from src.main import import_by_args; import_by_args()" --config_path config/config.yaml
+```python
+from compare_schema_data.import_ import import_schema_data
+
+import_schema_data(config_path="config/config.yaml")
+# Or specify a custom version tag:
+# import_schema_data(config_path="config/config.yaml", version="202609221530")
 ```
 
 ### Step 2: Compare Schema and Data (`compare`)
@@ -237,10 +241,14 @@ compare --config_path config/config.yaml
 compare --config_path config/config.yaml --version 202609221530 --prev_version 202609211600
 ```
 
-Alternatively, run with Python:
+Alternatively, call directly in Python (`.py`):
 
-```bash
-.venv/Scripts/python.exe -c "from src.main import compare_by_args; compare_by_args()" --config_path config/config.yaml
+```python
+from compare_schema_data.compare import compare_schema_data
+
+compare_schema_data(config_path="config/config.yaml")
+# Or specify custom versions:
+# compare_schema_data(config_path="config/config.yaml", version="202609221530", prev_version="202609211600")
 ```
 
 ---
@@ -313,10 +321,9 @@ compare-schema-data/
 │       └── source/                  # MySQL queries for metadata extraction
 │           ├── import_schema.yml
 │           └── import_data.yml
-└── src/
-    ├── main.py                      # CLI entry points (import_by_args, compare_by_args)
-    ├── import_.py                   # MySQL extraction and SQLite import logic
-    ├── compare.py                   # Schema and data diff comparison engine
+└── compare_schema_data/
+    ├── import_.py                   # MySQL extraction, SQLite import logic, and import_by_args CLI
+    ├── compare.py                   # Schema & data diff engine, and compare_by_args CLI
     ├── config.py                    # Pydantic configuration models and env resolver
     ├── models.py                    # Data models, diff types, and table header definitions
     ├── excel_helper.py              # Excel workbook generator (XlsxWriter)

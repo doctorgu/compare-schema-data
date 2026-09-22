@@ -6,7 +6,7 @@ from xlsxwriter.format import Format
 from xlsxwriter.workbook import Workbook
 from xlsxwriter.worksheet import Worksheet
 
-from src.models import (
+from compare_schema_data.models import (
     DataDiff,
     DataNotExists,
     HeaderAllType,
