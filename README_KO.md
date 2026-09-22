@@ -268,7 +268,7 @@ from util_other import send_discord_message
 
 def main():
     try:
-        config_path = str(Path(__file__).parent / "config.yml")
+        config_path = str(Path(__file__).parent / "config.yaml")
         import_schema_data(config_path=config_path)
         is_compare_changed, is_log_changed = compare_schema_data(
             config_path=config_path
@@ -351,11 +351,11 @@ compare-schema-data/
 │   ├── schema_data.sqlite3          # SQLite 스냅샷 데이터베이스 파일
 │   └── queries/
 │       ├── schema/                  # SQLite 차이점 분석 쿼리 모음
-│       │   ├── schema.yml
-│       │   └── data.yml
+│       │   ├── schema.yaml
+│       │   └── data.yaml
 │       └── source/                  # MySQL 메타데이터/데이터 추출 쿼리 모음
-│           ├── import_schema.yml
-│           └── import_data.yml
+│           ├── import_schema.yaml
+│           └── import_data.yaml
 └── compare_schema_data/
     ├── import_.py                   # MySQL 추출, SQLite 적재 로직 및 import_by_args CLI
     ├── compare.py                   # 스키마 및 데이터 차이 분석 엔진 및 compare_by_args CLI

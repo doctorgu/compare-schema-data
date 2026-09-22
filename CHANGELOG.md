@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.8
+
+- Rename *.yml files to *.yaml and update references in documentation
+
 ## 1.0.7
 
 - Update installation instructions to use PyPI in README and README_KO

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "compare-schema-data"
-version = "1.0.7"
+version = "1.0.8"
 description = "Compare schema and data between databases"
 readme = "README_KO.md"
 requires-python = ">=3.13"
@@ -57,10 +57,8 @@ namespaces = true
 [tool.setuptools.package-data]
 "db_client" = [
     "*.yaml",
-    "*.yml",
     "*.sql",
     "**/*.yaml",
-    "**/*.yml",
     "**/*.sql"
 ]
 

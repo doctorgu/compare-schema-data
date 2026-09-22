@@ -269,7 +269,7 @@ from util_other import send_discord_message
 
 def main():
     try:
-        config_path = str(Path(__file__).parent / "config.yml")
+        config_path = str(Path(__file__).parent / "config.yaml")
         import_schema_data(config_path=config_path)
         is_compare_changed, is_log_changed = compare_schema_data(
             config_path=config_path
@@ -352,11 +352,11 @@ compare-schema-data/
 │   ├── schema_data.sqlite3          # SQLite database storage
 │   └── queries/
 │       ├── schema/                  # SQLite queries for diffs & checks
-│       │   ├── schema.yml
-│       │   └── data.yml
+│       │   ├── schema.yaml
+│       │   └── data.yaml
 │       └── source/                  # MySQL queries for metadata extraction
-│           ├── import_schema.yml
-│           └── import_data.yml
+│           ├── import_schema.yaml
+│           └── import_data.yaml
 └── compare_schema_data/
     ├── import_.py                   # MySQL extraction, SQLite import logic, and import_by_args CLI
     ├── compare.py                   # Schema & data diff engine, and compare_by_args CLI
