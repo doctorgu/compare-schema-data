@@ -1,0 +1,142 @@
+- name: delete_data_by_version
+  value: |
+    DELETE
+    FROM    ${table}
+    WHERE   version = :version
+
+- name: insert_data_from_mysql
+  value: |
+    INSERT INTO ${table}
+        (
+            version, env_name, db_name,
+            ${columns}
+        )
+    VALUES
+        (
+            :version, :env_name, :db_name,
+            ${values}
+        )
+
+- name: read_table_sql
+  value: |
+    SELECT  sql
+    FROM    sqlite_master
+    WHERE   type = 'table'
+            AND name = :table
+
+- name: read_table_info
+  value: |
+    PRAGMA table_info("${table}")
+
+- name: create_backup_table
+  value: |
+    DROP TABLE IF EXISTS "${backup_table}";
+
+    CREATE TABLE "${backup_table}" AS
+    SELECT  *
+    FROM    "${table}";
+
+    DROP TABLE "${table}";
+
+- name: create_table_index
+  value: |
+    CREATE TABLE "${table}" (
+    ${columns}
+    ) STRICT;
+
+    CREATE UNIQUE INDEX IF NOT EXISTS "${table}_unique_idx" ON "${table}" (${index_cols});
+
+- name: read_data_not_exists
+  value: |
+    SELECT  a.env_name, a.db_name, 
+            a.${key_columns}
+    FROM    ${table} a
+            LEFT JOIN ${table} b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND ${key_columns_equal}
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND b.version IS NULL
+
+- name: read_data_different
+  value: |
+    SELECT  a.${key_columns},
+            ${other_columns_comma_a},
+            ${other_columns_comma_b},
+            a.env_name, a.db_name
+    FROM    ${table} a
+            INNER JOIN ${table} b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND ${key_columns_equal}
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND
+            (
+                1 != 1
+                ${other_columns_inequal}
+            )
+
+- name: read_not_same_data
+  value: |
+    WITH
+    #foreach dt in ${data_tables} separator=','
+    n_${dt.table} AS (
+        SELECT  env_name, db_name,
+                #foreach col in ${dt.columns} separator=','
+                "${col}"
+                #endfor
+        FROM    "${dt.table}"
+        WHERE   version = :version
+    )
+    , o_${dt.table} AS (
+        SELECT  env_name, db_name,
+                #foreach col in ${dt.columns} separator=','
+                "${col}"
+                #endfor
+        FROM    "${dt.table}"
+        WHERE   version = :prev_version
+    )
+    #endfor
+    , cnt AS (
+        #foreach idx, dt in ${data_tables} separator=' UNION ALL '
+        SELECT  '${dt.table}' compare_type,
+                (
+                    SELECT  count(*) cnt_n
+                    FROM    n_${dt.table}
+                ) n,
+                (
+                    SELECT  count(*) cnt_o
+                    FROM    o_${dt.table}
+                ) o,
+                (
+                    SELECT  count(*) cnt_n_o
+                    FROM    n_${dt.table} n
+                            INNER JOIN o_${dt.table} o
+                            ON o.env_name = n.env_name
+                            AND o.db_name = n.db_name
+                            AND
+                            #foreach col in ${dt.columns} separator=' AND '
+                            COALESCE(o."${col}", '<NULL>') = COALESCE(n."${col}", '<NULL>')
+                            #endfor
+                ) n_o
+        #endfor
+    )
+    SELECT  compare_type
+    FROM    cnt
+    WHERE   n != o OR o != n_o

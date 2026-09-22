@@ -1,0 +1,6 @@
+- name: read_data
+  value: |
+    SELECT  %(version)s VERSION, %(env_name)s ENV_NAME, %(db_name)s DB_NAME,
+            ${columns_list}
+    FROM    ${table}
+    ORDER BY ${key_columns_list}

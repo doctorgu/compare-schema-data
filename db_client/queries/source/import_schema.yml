@@ -1,0 +1,53 @@
+- name: read_table
+  value: |
+    SELECT  %(version)s VERSION, %(env_name)s ENV_NAME, %(db_name)s DB_NAME,
+            TABLE_NAME, TABLE_TYPE, TABLE_COMMENT
+    FROM    INFORMATION_SCHEMA.TABLES
+    WHERE   TABLE_SCHEMA = %(db_name)s
+    ORDER BY TABLE_NAME
+
+- name: read_column
+  value: |
+    SELECT  %(version)s VERSION, %(env_name)s ENV_NAME, %(db_name)s DB_NAME,
+            TABLE_NAME, COLUMN_NAME, ORDINAL_POSITION, COLUMN_DEFAULT,
+            IS_NULLABLE, DATA_TYPE, CHARACTER_MAXIMUM_LENGTH,
+            NUMERIC_PRECISION, NUMERIC_SCALE, COLUMN_COMMENT,
+            COLUMN_TYPE, COLUMN_KEY, EXTRA
+    FROM    INFORMATION_SCHEMA.COLUMNS
+    WHERE   (TABLE_SCHEMA, TABLE_NAME) IN (
+                SELECT  TABLE_SCHEMA, TABLE_NAME
+                FROM    INFORMATION_SCHEMA.TABLES
+                WHERE   TABLE_SCHEMA = %(db_name)s
+            )
+    ORDER BY TABLE_NAME, ORDINAL_POSITION
+
+- name: read_index
+  value: |
+    SELECT  %(version)s VERSION, %(env_name)s ENV_NAME, %(db_name)s DB_NAME,
+            INDEX_NAME,
+            TABLE_NAME,
+            GROUP_CONCAT(COLUMN_NAME ORDER BY SEQ_IN_INDEX) COLUMN_NAME_COMMA, 
+            INDEX_TYPE, 
+            CASE NON_UNIQUE WHEN 1 THEN 0 ELSE 1 END IS_UNIQUE
+    FROM    INFORMATION_SCHEMA.STATISTICS
+    WHERE   TABLE_SCHEMA = %(db_name)s
+            -- exclude foreign key index
+            AND (TABLE_SCHEMA, TABLE_NAME, INDEX_NAME) NOT IN (
+                SELECT  TABLE_SCHEMA, TABLE_NAME, CONSTRAINT_NAME
+                FROM    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+                WHERE   REFERENCED_TABLE_SCHEMA = %(db_name)s
+                        AND REFERENCED_TABLE_NAME IS NOT NULL
+            )
+    GROUP BY TABLE_NAME, INDEX_NAME, INDEX_TYPE, NON_UNIQUE
+    ORDER BY TABLE_NAME, INDEX_NAME
+
+- name: read_reference
+  value: |
+    SELECT  %(version)s VERSION, %(env_name)s ENV_NAME, %(db_name)s DB_NAME,
+            CONSTRAINT_NAME,
+            TABLE_NAME, COLUMN_NAME,
+            REFERENCED_TABLE_NAME, REFERENCED_COLUMN_NAME
+    FROM    INFORMATION_SCHEMA.KEY_COLUMN_USAGE
+    WHERE   REFERENCED_TABLE_SCHEMA = %(db_name)s
+            AND REFERENCED_TABLE_NAME IS NOT NULL
+    ORDER BY TABLE_NAME, COLUMN_NAME

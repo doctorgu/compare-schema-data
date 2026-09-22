@@ -1,0 +1,597 @@
+- name: in_table_both_exists
+  value: |
+    AND (a.version, a.env_name, a.db_name, a.table_name) IN (
+        SELECT  a.version, a.env_name, a.db_name, a.table_name
+        FROM    schema_tables a
+                INNER JOIN schema_tables b
+                ON a.version = b.version
+                AND a.table_name = b.table_name
+        WHERE   a.version = :current_version
+                AND a.env_name = :current_env_name
+                AND b.env_name = :other_env_name
+                AND a.db_name = :current_db_name
+                AND b.db_name = :other_db_name
+    )
+
+- name: read_latest_version
+  value: |
+    SELECT  MAX(version) version
+    FROM    schema_tables;
+
+- name: read_prev_version
+  value: |
+    SELECT  MAX(version) version
+    FROM    schema_tables
+    WHERE   version < :version;
+
+- name: delete_schema_by_version
+  value: |
+    DELETE
+    FROM    schema_tables
+    WHERE   version = :version;
+
+    DELETE
+    FROM    schema_columns
+    WHERE   version = :version;
+
+    DELETE
+    FROM    schema_indices
+    WHERE   version = :version;
+
+    DELETE
+    FROM    schema_references
+    WHERE   version = :version;
+
+- name: insert_tables_from_mysql
+  value: |
+    INSERT INTO schema_tables
+        (
+            version, env_name, db_name,
+            table_name, table_type, table_comment
+        )
+    VALUES
+        (
+            :version, :env_name, :db_name,
+            :table_name, :table_type, :table_comment
+        )
+
+- name: insert_columns_from_mysql
+  value: |
+    INSERT INTO schema_columns
+        (
+            version, env_name, db_name,
+            table_name,
+            column_name,
+            ordinal_position,
+            column_default,
+            is_nullable,
+            data_type,
+            character_maximum_length,
+            numeric_precision,
+            numeric_scale,
+            column_type,
+            column_comment
+        )
+    VALUES
+        (
+            :version, :env_name, :db_name,
+            :table_name,
+            :column_name,
+            :ordinal_position,
+            :column_default,
+            :is_nullable,
+            :data_type,
+            :character_maximum_length,
+            :numeric_precision,
+            :numeric_scale,
+            :column_type,
+            :column_comment
+        )
+
+- name: insert_indices_from_mysql
+  value: |
+    INSERT INTO schema_indices
+        (
+            version, env_name, db_name,
+            table_name,
+            index_name,
+            column_name_comma,
+            index_type, is_unique
+        )
+    VALUES
+        (
+            :version, :env_name, :db_name,
+            :table_name,
+            :index_name,
+            :column_name_comma,
+            :index_type, :is_unique
+        )
+
+- name: insert_references_from_mysql
+  value: |
+    INSERT INTO schema_references
+        (
+            version, env_name, db_name,
+            constraint_name,
+            table_name,
+            column_name,
+            referenced_table_name,
+            referenced_column_name
+        )
+    VALUES
+        (
+            :version, :env_name, :db_name,
+            :constraint_name,
+            :table_name,
+            :column_name,
+            :referenced_table_name,
+            :referenced_column_name
+        )
+
+- name: read_schema_not_exists_table
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name
+    FROM    schema_tables a
+            LEFT JOIN schema_tables b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND a.table_type = 'BASE TABLE'
+            AND b.version IS NULL
+    #if ${exclude_tables}
+            AND a.table_name NOT IN
+            #foreach t in ${exclude_tables} open="(" separator="," close=")"
+                :t
+            #endfor
+    #endif
+
+- name: read_schema_not_exists_view
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name view_name
+    FROM    schema_tables a
+            LEFT JOIN schema_tables b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND a.table_type = 'VIEW'
+            AND b.version IS NULL
+
+- name: read_schema_not_exists_column
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name, a.column_name,
+            a.column_default, a.is_nullable, a.data_type,
+            a.column_type, a.column_comment
+    FROM    schema_columns a
+            LEFT JOIN schema_columns b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+            AND a.column_name = b.column_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND b.version IS NULL        
+            #include in_table_both_exists
+    #if ${exclude_tables}
+            AND a.table_name NOT IN
+            #foreach t in ${exclude_tables} open="(" separator="," close=")"
+                :t
+            #endfor
+    #endif
+    #if ${exclude_columns}
+            AND a.column_name NOT IN
+            #foreach c in ${exclude_columns} open="(" separator="," close=")"
+                :c
+            #endfor
+    #endif
+
+- name: read_schema_not_exists_index
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name,
+            a.index_name, a.column_name_comma
+    FROM    schema_indices a
+            LEFT JOIN schema_indices b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+            AND a.index_name = b.index_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND b.version IS NULL        
+            #include in_table_both_exists
+
+- name: read_schema_not_exists_reference
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name, a.constraint_name
+    FROM    schema_references a
+            LEFT JOIN schema_references b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+            AND a.constraint_name = b.constraint_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND b.version IS NULL        
+            #include in_table_both_exists
+
+- name: read_schema_different_table
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name,
+            a.table_type table_type_a,
+            b.table_type table_type_b,
+            a.table_comment table_comment_a,
+            b.table_comment table_comment_b
+    FROM    schema_tables a
+            INNER JOIN schema_tables b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND
+            (
+                1 != 1
+                OR a.table_type != b.table_type
+                OR COALESCE(a.table_comment, 'null') != COALESCE(b.table_comment, 'null')
+            )
+    #if ${exclude_tables}
+            AND a.table_name NOT IN
+            #foreach t in ${exclude_tables} open="(" separator="," close=")"
+                :t
+            #endfor
+    #endif
+
+- name: read_schema_different_column
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name, a.column_name,
+            --a.ordinal_position ordinal_position_a,
+            --b.ordinal_position ordinal_position_b,
+            COALESCE(a.column_default, 'null') column_default_a,
+            COALESCE(b.column_default, 'null') column_default_b,
+            a.is_nullable is_nullable_a,
+            b.is_nullable is_nullable_b,
+            a.data_type data_type_a,
+            b.data_type data_type_b,
+            COALESCE(a.character_maximum_length, -1) character_maximum_length_a,
+            COALESCE(b.character_maximum_length, -1) character_maximum_length_b,
+            COALESCE(a.numeric_precision, -1) numeric_precision_a,
+            COALESCE(b.numeric_precision, -1) numeric_precision_b,
+            COALESCE(a.numeric_scale, -1) numeric_scale_a,
+            COALESCE(b.numeric_scale, -1) numeric_scale_b,
+            COALESCE(a.column_comment, 'null') column_comment_a,
+            COALESCE(b.column_comment, 'null') column_comment_b
+    FROM    schema_columns a
+            INNER JOIN schema_columns b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+            AND a.column_name = b.column_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND
+            (
+                1 != 1
+                -- OR a.ordinal_position != b.ordinal_position
+                OR COALESCE(a.column_default, 'null') != COALESCE(b.column_default, 'null')
+                OR a.is_nullable != b.is_nullable
+                OR a.data_type != b.data_type
+                OR COALESCE(a.character_maximum_length, -1)
+                   != COALESCE(b.character_maximum_length, -1)
+                OR COALESCE(a.numeric_precision, -1) != COALESCE(b.numeric_precision, -1)
+                OR COALESCE(a.numeric_scale, -1) != COALESCE(b.numeric_scale, -1)
+                OR COALESCE(a.column_comment, 'null') != COALESCE(b.column_comment, 'null')
+            )
+    #if ${exclude_tables}
+            AND a.table_name NOT IN
+            #foreach t in ${exclude_tables} open="(" separator="," close=")"
+                :t
+            #endfor
+    #endif
+    #if ${exclude_columns}
+            AND a.column_name NOT IN
+            #foreach c in ${exclude_columns} open="(" separator="," close=")"
+                :c
+            #endfor
+    #endif
+
+- name: read_schema_different_index
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name, a.index_name,
+            a.column_name_comma column_name_comma_a,
+            b.column_name_comma column_name_comma_b,
+            a.index_type index_type_a,
+            b.index_type index_type_b,
+            a.is_unique is_unique_a,
+            b.is_unique is_unique_b
+    FROM    schema_indices a
+            INNER JOIN schema_indices b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+            AND a.index_name = b.index_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND
+            (
+                1 != 1
+                OR a.column_name_comma != b.column_name_comma
+                OR a.index_type != b.index_type
+                OR a.is_unique != b.is_unique
+            )
+
+- name: read_schema_different_reference
+  value: |
+    SELECT  a.env_name, a.db_name, a.table_name, a.constraint_name,
+            a.column_name column_name_a,
+            b.column_name column_name_b,
+            a.referenced_table_name referenced_table_name_a,
+            b.referenced_table_name referenced_table_name_b,
+            a.referenced_column_name referenced_column_name_a,
+            b.referenced_column_name referenced_column_name_b
+    FROM    schema_references a
+            INNER JOIN schema_references b
+            ON
+    #if ${other_version}
+            b.version = :other_version
+    #else
+            a.version = b.version
+    #endif
+            AND b.env_name = :other_env_name
+            AND b.db_name = :other_db_name
+            AND a.table_name = b.table_name
+            AND a.constraint_name = b.constraint_name
+    WHERE   a.version = :current_version
+            AND a.env_name = :current_env_name
+            AND a.db_name = :current_db_name
+            AND
+            (
+                1 != 1
+                OR a.column_name != b.column_name
+                OR a.referenced_table_name != b.referenced_table_name
+                OR a.referenced_column_name != b.referenced_column_name
+            )
+
+- name: read_not_same_schema
+  value: |
+    WITH n_tbl AS (
+        SELECT  env_name, db_name, table_name, table_comment
+        FROM    schema_tables
+        WHERE   VERSION = :version
+                AND table_type = 'BASE TABLE'
+    )
+    , o_tbl AS (
+        SELECT  env_name, db_name, table_name, table_comment
+        FROM    schema_tables
+        WHERE   VERSION = :prev_version
+                AND table_type = 'BASE TABLE'
+    )
+    , n_vw AS (
+        SELECT  env_name, db_name, table_name, table_comment
+        FROM    schema_tables
+        WHERE   VERSION = :version
+                AND table_type = 'VIEW'
+    )
+    , o_vw AS (
+        SELECT  env_name, db_name, table_name, table_comment
+        FROM    schema_tables
+        WHERE   VERSION = :prev_version
+                AND table_type = 'VIEW'
+    )
+    , n_col AS (
+        SELECT  version, env_name, db_name, table_name, column_name,
+                ordinal_position, column_default, is_nullable, data_type,
+                character_maximum_length, numeric_precision,
+                numeric_scale, column_comment
+        FROM    schema_columns
+        WHERE   VERSION = :version
+    )
+    , o_col AS (
+        SELECT  version, env_name, db_name, table_name, column_name,
+                ordinal_position, column_default, is_nullable, data_type,
+                character_maximum_length, numeric_precision,
+                numeric_scale, column_comment
+        FROM    schema_columns
+        WHERE   VERSION = :prev_version
+    )
+    , n_idx AS (
+        SELECT  env_name, db_name, table_name, index_name,
+                column_name_comma, index_type, is_unique
+        FROM    schema_indices
+        WHERE   VERSION = :version
+    )
+    , o_idx AS (
+        SELECT  env_name, db_name, table_name, index_name,
+                column_name_comma, index_type, is_unique
+        FROM    schema_indices
+        WHERE   VERSION = :prev_version
+    )
+    , n_ref AS (
+        SELECT  env_name, db_name, constraint_name,
+                table_name, column_name, referenced_table_name,
+                referenced_column_name
+        FROM    schema_references
+        WHERE   VERSION = :version
+    )
+    , o_ref AS (
+        SELECT  env_name, db_name, constraint_name,
+                table_name, column_name, referenced_table_name,
+                referenced_column_name
+        FROM    schema_references
+        WHERE   VERSION = :prev_version
+    )
+    , cnt AS (
+        SELECT  'table' compare_type,
+                (
+                    SELECT  count(*) cnt_n
+                    FROM    n_tbl
+                ) n,
+                (
+                    SELECT  count(*) cnt_o
+                    FROM    o_tbl
+                ) o,
+                (
+                    SELECT  count(*) cnt_n_o
+                    FROM    n_tbl n
+                            INNER JOIN o_tbl o
+                            ON o.env_name = n.env_name
+                            AND o.db_name = n.db_name
+                            AND o.table_name = n.table_name
+                            AND o.table_comment = n.table_comment
+                ) n_o
+        UNION ALL
+        SELECT  'view' compare_type,
+                (
+                    SELECT  count(*) cnt_n
+                    FROM    n_vw
+                ) n,
+                (
+                    SELECT  count(*) cnt_o
+                    FROM    o_vw
+                ) o,
+                (
+                    SELECT  count(*) cnt_n_o
+                    FROM    n_vw n
+                            INNER JOIN o_vw o
+                            ON o.env_name = n.env_name
+                            AND o.db_name = n.db_name
+                            AND o.table_name = n.table_name
+                            AND o.table_comment = n.table_comment
+                ) n_o
+        UNION ALL
+        SELECT  'column' compare_type,
+                (
+                    SELECT  count(*) cnt_n
+                    FROM    n_col
+                ) n,
+                (
+                    SELECT  count(*) cnt_o
+                    FROM    o_col
+                ) o,
+                (
+                    SELECT  count(*) cnt_n_o
+                    FROM    n_col n
+                            INNER JOIN o_col o
+                            ON o.env_name = n.env_name
+                            AND o.db_name = n.db_name
+                            AND o.table_name = n.table_name
+                            AND o.column_name = n.column_name
+                            AND o.ordinal_position = n.ordinal_position
+                            AND COALESCE(o.column_default, '{NULL}') 
+                                = COALESCE(n.column_default, '{NULL}')
+                            AND o.is_nullable = n.is_nullable
+                            AND o.data_type = n.data_type
+                            AND COALESCE(o.character_maximum_length, 0) 
+                                = COALESCE(n.character_maximum_length, 0)
+                            AND COALESCE(o.numeric_precision, -1) 
+                                = COALESCE(n.numeric_precision, -1)
+                            AND COALESCE(o.numeric_scale, -1) 
+                                = COALESCE(n.numeric_scale, -1)
+                            AND o.column_comment = n.column_comment
+                ) n_o
+        UNION ALL
+        SELECT  'index' compare_type,
+                (
+                    SELECT  count(*) cnt_n
+                    FROM    n_idx
+                ) n,
+                (
+                    SELECT  count(*) cnt_o
+                    FROM    o_idx
+                ) o,
+                (
+                    SELECT  count(*) cnt_n_o
+                    FROM    n_idx n
+                            INNER JOIN o_idx o
+                            ON o.env_name = n.env_name
+                            AND o.db_name = n.db_name
+                            AND o.table_name = n.table_name
+                            AND o.index_name = n.index_name
+                            AND o.column_name_comma = n.column_name_comma
+                            AND o.index_type = n.index_type
+                            AND o.is_unique = n.is_unique
+                ) n_o
+        UNION ALL
+        SELECT  'reference' compare_type,
+                (
+                    SELECT  count(*) cnt_n
+                    FROM    n_ref
+                ) n,
+                (
+                    SELECT  count(*) cnt_o
+                    FROM    o_ref
+                ) o,
+                (
+                    SELECT  count(*) cnt_n_o
+                    FROM    n_ref n
+                            INNER JOIN o_ref o
+                            ON o.env_name = n.env_name
+                            AND o.db_name = n.db_name
+                            AND o.constraint_name = n.constraint_name
+                            AND o.table_name = n.table_name
+                            AND o.column_name = n.column_name
+                            AND o.referenced_table_name = n.referenced_table_name
+                            AND o.referenced_column_name = n.referenced_column_name
+                ) n_o
+    )
+    SELECT  compare_type
+    FROM    cnt
+    WHERE   n != o OR o != n_o
