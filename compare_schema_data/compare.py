@@ -1257,10 +1257,8 @@ def compare_schema_data(
     with SchemaClient(database=sqlite_path) as db:
         version = version or get_latest_version(db)
         prev_version = prev_version or get_prev_version(db, version)
-        if not prev_version or not version:
-            raise ValueError(
-                f"prev_version ({prev_version}) or version ({version}) is empty"
-            )
+        if not prev_version:
+            return False, False
 
         is_same_schema, compare_types_schema = get_same_schema_by_version(
             db, version, prev_version

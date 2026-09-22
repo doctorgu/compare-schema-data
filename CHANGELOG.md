@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.0.6
+
+- Return False, False when prev_version is empty in compare_schema_data
+
 ## 1.0.5
 
 - Refactor change detection in compare_schema_data and update documentation
