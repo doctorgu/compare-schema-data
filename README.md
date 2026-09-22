@@ -246,9 +246,48 @@ Alternatively, call directly in Python (`.py`):
 ```python
 from compare_schema_data.compare import compare_schema_data
 
-compare_schema_data(config_path="config/config.yaml")
+is_compare_changed, is_log_changed = compare_schema_data(
+    config_path="config/config.yaml"
+)
 # Or specify custom versions:
-# compare_schema_data(config_path="config/config.yaml", version="202609221530", prev_version="202609211600")
+# is_compare_changed, is_log_changed = compare_schema_data(
+#     config_path="config/config.yaml", version="202609221530", prev_version="202609211600"
+# )
+```
+
+### Complete Python Integration Example (`main.py`)
+
+You can integrate both `import_schema_data` and `compare_schema_data` into your automation pipelines (e.g., CI/CD, scheduled jobs, alerting on change):
+
+```python
+import traceback
+from pathlib import Path
+
+from compare_schema_data.compare import compare_schema_data
+from compare_schema_data.import_ import import_schema_data
+
+from env_config import env_config
+from util_other import send_discord_message
+
+
+def main():
+    try:
+        config_path = str(Path(__file__).parent / "config.yml")
+        import_schema_data(config_path=config_path)
+        is_compare_changed, is_log_changed = compare_schema_data(
+            config_path=config_path
+        )
+        if is_log_changed:
+            send_discord_message(
+                env_config.DISCORD_WEB_HOOK_URL, "schema or data changed"
+            )
+    except Exception as e:
+        print(traceback.format_exc())
+
+        send_discord_message(env_config.DISCORD_WEB_HOOK_URL, str(e))
+
+
+main()
 ```
 
 ---

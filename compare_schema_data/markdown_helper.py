@@ -52,7 +52,7 @@ def write_markdown(
     remark: str,
     md_path_compare: Path,
     md_path_log: Path,
-) -> tuple[bool, bool]:
+):
     """write markdown"""
 
     lines_compare: list[str] = []
@@ -81,7 +81,7 @@ def write_markdown(
                 lines_log.extend(lines_cur)
 
     if not lines_log and not lines_compare:
-        return False, False
+        return
 
     headers: list[str] = []
     headers.append("# log for schema and data")
@@ -97,5 +97,3 @@ def write_markdown(
     if lines_log:
         lines_final = headers + lines_log
         md_path_log.write_text("\n".join(lines_final), encoding="utf-8")
-
-    return bool(lines_compare), bool(lines_log)

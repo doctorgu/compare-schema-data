@@ -27,6 +27,7 @@ from compare_schema_data.models import (
     SchemaDataType,
     SchemaDiff,
     SchemaNotExists,
+    type_to_compare_log,
 )
 from compare_schema_data.util_mysql import get_column_ddl
 from compare_schema_data.util_path import load_config
@@ -1207,12 +1208,42 @@ def get_config(config_path: str = ""):
     return config
 
 
+def has_changed(
+    *,
+    schema_not_exists_list: dict[HeaderSchemaNotExistsType, list[SchemaNotExists]],
+    schema_diff_list: dict[HeaderSchemaDiffType, list[SchemaDiff]],
+    data_not_exists_list: dict[HeaderDataNotExistsType, list[DataNotExists]],
+    data_diff_list: dict[HeaderDataDiffType, list[DataDiff]],
+) -> tuple[bool, bool]:
+    """check if there are compare or log changes"""
+
+    is_compare_changed = False
+    is_log_changed = False
+
+    for items_all in [
+        schema_not_exists_list,
+        schema_diff_list,
+        data_not_exists_list,
+        data_diff_list,
+    ]:
+        for header, item_list in items_all.items():
+            if not item_list:
+                continue
+
+            if type_to_compare_log[header] == "compare":
+                is_compare_changed = True
+            else:
+                is_log_changed = True
+
+    return is_compare_changed, is_log_changed
+
+
 def compare_schema_data(
     *,
     config_path: str = "",
     prev_version: str = "",
     version: str = "",
-) -> tuple[bool, bool] | None:
+) -> tuple[bool, bool]:
     """compare and log schema and data"""
 
     config = get_config(config_path)
@@ -1227,8 +1258,9 @@ def compare_schema_data(
         version = version or get_latest_version(db)
         prev_version = prev_version or get_prev_version(db, version)
         if not prev_version or not version:
-            print(f"prev_version ({prev_version}) or version ({version}) is empty")
-            return None
+            raise ValueError(
+                f"prev_version ({prev_version}) or version ({version}) is empty"
+            )
 
         is_same_schema, compare_types_schema = get_same_schema_by_version(
             db, version, prev_version
@@ -1251,6 +1283,13 @@ def compare_schema_data(
         )
         data_not_exists_list, data_diff_list = compare_data(
             db, compare_types_data, version, prev_version, config
+        )
+
+        is_compare_changed, is_log_changed = has_changed(
+            schema_not_exists_list=schema_not_exists_list,
+            schema_diff_list=schema_diff_list,
+            data_not_exists_list=data_not_exists_list,
+            data_diff_list=data_diff_list,
         )
 
         output_dir = Path(config.output_dir)
@@ -1282,7 +1321,7 @@ def compare_schema_data(
             md_path_compare = output_dir / f"{version}_compare.md"
             md_path_log = output_dir / f"{version}_log.md"
 
-            is_compare, is_log = write_markdown(
+            write_markdown(
                 schema_not_exists_list=schema_not_exists_list,
                 schema_diff_list=schema_diff_list,
                 data_not_exists_list=data_not_exists_list,
@@ -1292,7 +1331,7 @@ def compare_schema_data(
                 md_path_log=md_path_log,
             )
 
-            return is_compare, is_log
+        return is_compare_changed, is_log_changed
 
 
 class ConfigArgs(BaseSettings):

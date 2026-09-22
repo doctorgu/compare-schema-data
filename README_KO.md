@@ -245,9 +245,48 @@ Python 코드(`.py`)에서 직접 호출할 수도 있습니다:
 ```python
 from compare_schema_data.compare import compare_schema_data
 
-compare_schema_data(config_path="config/config.yaml")
+is_compare_changed, is_log_changed = compare_schema_data(
+    config_path="config/config.yaml"
+)
 # 특정 버전을 직접 지정하여 비교할 경우:
-# compare_schema_data(config_path="config/config.yaml", version="202609221530", prev_version="202609211600")
+# is_compare_changed, is_log_changed = compare_schema_data(
+#     config_path="config/config.yaml", version="202609221530", prev_version="202609211600"
+# )
+```
+
+### 전체 Python 연동 예제 (`main.py`)
+
+배치 작업이나 CI/CD 파이프라인에서 `import_schema_data`와 `compare_schema_data`를 함께 실행하고, 변경 발생 시 알림(예: Discord 웹훅)을 전송하도록 연동할 수 있습니다:
+
+```python
+import traceback
+from pathlib import Path
+
+from compare_schema_data.compare import compare_schema_data
+from compare_schema_data.import_ import import_schema_data
+
+from env_config import env_config
+from util_other import send_discord_message
+
+
+def main():
+    try:
+        config_path = str(Path(__file__).parent / "config.yml")
+        import_schema_data(config_path=config_path)
+        is_compare_changed, is_log_changed = compare_schema_data(
+            config_path=config_path
+        )
+        if is_log_changed:
+            send_discord_message(
+                env_config.DISCORD_WEB_HOOK_URL, "schema or data changed"
+            )
+    except Exception as e:
+        print(traceback.format_exc())
+
+        send_discord_message(env_config.DISCORD_WEB_HOOK_URL, str(e))
+
+
+main()
 ```
 
 ---
